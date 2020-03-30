@@ -1,0 +1,142 @@
+"""This module contains functions to be used both as action and condition functions
+for postprocessing patterns.
+"""
+
+# Condition functions
+
+def is_negated(span):
+    """Return True if a span is marked as negated by cycontext."""
+    return span._.is_negated
+
+def is_uncertain(span):
+    """Return True if a span is marked as uncertain by cycontext."""
+    return span._.is_uncertain
+
+def is_historical(span):
+    """Return True if a span is marked as historical by cycontext."""
+    return span._.is_historical
+
+def is_hypothetical(span):
+    """Return True if a span is marked as hypothetical by cycontext."""
+    return span._.is_hypothetical
+
+def is_family(span):
+    """Return True if a span is marked as family by cycontext."""
+    return span._.is_family
+
+def is_modified_by_category(span, category):
+    """Returns True if a span is modified by a cycontext TagObject
+    modifier with a certain category. Case insensitive.
+    """
+    for modifier in span._.modifiers:
+        if modifier.category.upper() == category.upper():
+            return True
+    return False
+
+def is_modified_by_text(span, text, regex=True):
+    """Returns True if a span is modified by a cycontext TabObject
+    modifier with a certain text.
+    """
+    if regex is True:
+        import re
+        for modifier in span._.modifiers:
+            if re.search(text, modifier.span.lower_, re.IGNORECASE):
+                return True
+
+    else:
+        for modifier in span._.modifiers:
+            if modifier.span.upper_ == text.upper():
+                return True
+    return False
+
+def is_preceded_by(ent, target, window=1):
+    """Check if an entity is preceded by a target word within a certain window.
+    Case-insensitive.
+    If any phrases in target are more than one token long, this may not capture it
+    if window is smaller than the number of tokens.
+    ent (Span):  A spaCy Span
+    target (str or iterable): Either a single string or iterable of strings.
+        If an iterable, will return True if any of the strings are in the window
+        preceding ent.
+    """
+    preceding_span = ent.doc[ent.start - window: ent.start]
+    preceding_string = " ".join([token.lower_ for token in preceding_span])
+    if isinstance(target, str):
+        return target.lower() in preceding_string
+    for string in target:
+        if string.lower() in preceding_string:
+            return True
+    return False
+
+
+def is_followed_by(ent, target, window=1):
+    """Check if an entity is followed by a target word within a certain window.
+    Case-insensitive.
+    If any phrases in target are more than one token long, this may not capture it
+    if window is smaller than the number of tokens.
+    ent (Span):  A spaCy Span
+    target (str or iterable): Either a single string or iterable of strings.
+        If an iterable, will return True if any of the strings are in the window
+        following ent.
+    """
+    following_span = ent.doc[ent.end: ent.end+window]
+    following_string = " ".join([token.lower_ for token in following_span])
+    if isinstance(target, str):
+        return target.lower() in following_string
+    for string in target:
+        if string.lower() in following_string:
+            return True
+    return False
+
+def sentence_contains(ent, target, regex=True):
+    """Check if an entity occurs in the same sentence as another span of text.
+    ent (Span): A spaCy Span
+    target (str or iterable): Either a single string or iterable of strings.
+        If an iterable, will return True if any of the strings are a substring
+        of ent.sent.
+    Case insensitive.
+    """
+
+    if regex is True:
+        import re
+        func = lambda x: re.search(x, ent.sent.lower_, re.IGNORECASE) is not None
+    else:
+        func = lambda x: x.lower() in ent.sent.lower_
+
+    if isinstance(target, str):
+        return func(target)
+
+    # If it's an iterable, check if any of the strings are in sent
+    for string in target:
+        if func(string):
+            return True
+    return False
+
+# Action funcs
+
+def remove_ent(ent, i):
+    """Remove an entity at position [i] from doc.ents."""
+    ent.doc.ents = ent.doc.ents[:i] + ent.doc.ents[i+1:]
+
+
+def set_label(ent, i, label):
+    """Create a copy of the entity with a new label."""
+    from spacy.tokens import Span
+    new_ent = Span(ent.doc, ent.start, ent.end, label=label)
+    # Copy any additional attributes
+    # NOTE: This may not be complete and should be used with caution
+    for (attr, values) in ent._.__dict__["_extensions"].items():
+        setattr(new_ent._, attr, values[0])
+    if len(ent.doc.ents) == 1:
+        ent.doc.ents = (new_ent,)
+    else:
+        try:
+            ent.doc.ents = ent.doc.ents[:i] + (new_ent,) + ent.doc.ents[i+1:]
+        except ValueError: # Overlaps with another entity - debug later
+            pass
+
+def set_negated(ent, i, value=True):
+    ent._.is_negated = value
+
+
+
