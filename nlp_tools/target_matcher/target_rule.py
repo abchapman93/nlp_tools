@@ -7,5 +7,5 @@ class TargetRule:
         self.on_match = on_match
         self._rule_id = None
         
-        def __repr__(self):
+    def __repr__(self):
         return f"""TargetRule(literal="{self.literal}", category="{self.category}", pattern={self.pattern}, attributes={self.attributes}, on_match={self.on_match})"""
