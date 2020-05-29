@@ -33,21 +33,27 @@ def is_modified_by_category(span, category):
             return True
     return False
 
-def is_modified_by_text(span, text, regex=True):
+def is_modified_by_text(span, target, regex=True):
     """Returns True if a span is modified by a cycontext TabObject
     modifier with a certain text.
     """
-    if regex is True:
-        import re
-        for modifier in span._.modifiers:
-            if re.search(text, modifier.span.lower_, re.IGNORECASE):
-                return True
-
-    else:
-        for modifier in span._.modifiers:
-            if modifier.span.upper_ == text.upper():
-                return True
+    for modifier in span._.modifiers:
+        if span_contains(modifier.span, target, regex):
+            return True
     return False
+
+
+    # if regex is True:
+    #     import re
+    #     for modifier in span._.modifiers:
+    #         if re.search(text, modifier.span.lower_, re.IGNORECASE):
+    #             return True
+    #
+    # else:
+    #     for modifier in span._.modifiers:
+    #         if modifier.span.upper_ == text.upper():
+    #             return True
+    # return False
 
 def is_preceded_by(ent, target, window=1):
     """Check if an entity is preceded by a target word within a certain window.
@@ -88,6 +94,36 @@ def is_followed_by(ent, target, window=1):
             return True
     return False
 
+def span_contains(span, target, regex=True):
+    if regex is True:
+        import re
+        func = lambda x: re.search(x, span.lower_, re.IGNORECASE) is not None
+    else:
+        func = lambda x: x.lower() in span.lower_
+
+    if isinstance(target, str):
+        return func(target)
+
+    # If it's an iterable, check if any of the strings are in sent
+    for string in target:
+        # print(string)
+        # print(func(string))
+        # print()
+        if func(string):
+            return True
+    return False
+
+def ent_contains(ent, target, regex=True):
+    """Check if an entity occurs in the same sentence as another span of text.
+    ent (Span): A spaCy Span
+    target (str or iterable): Either a single string or iterable of strings.
+        If an iterable, will return True if any of the strings are a substring
+        of ent.sent.
+    Case insensitive.
+    """
+    return span_contains(ent, target, regex)
+
+
 def sentence_contains(ent, target, regex=True):
     """Check if an entity occurs in the same sentence as another span of text.
     ent (Span): A spaCy Span
@@ -96,21 +132,7 @@ def sentence_contains(ent, target, regex=True):
         of ent.sent.
     Case insensitive.
     """
-
-    if regex is True:
-        import re
-        func = lambda x: re.search(x, ent.sent.lower_, re.IGNORECASE) is not None
-    else:
-        func = lambda x: x.lower() in ent.sent.lower_
-
-    if isinstance(target, str):
-        return func(target)
-
-    # If it's an iterable, check if any of the strings are in sent
-    for string in target:
-        if func(string):
-            return True
-    return False
+    return span_contains(ent.sent, target, regex)
 
 # Action funcs
 
@@ -137,6 +159,3 @@ def set_label(ent, i, label):
 
 def set_negated(ent, i, value=True):
     ent._.is_negated = value
-
-
-
