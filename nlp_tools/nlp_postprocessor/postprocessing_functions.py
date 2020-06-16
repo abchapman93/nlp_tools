@@ -42,19 +42,6 @@ def is_modified_by_text(span, target, regex=True):
             return True
     return False
 
-
-    # if regex is True:
-    #     import re
-    #     for modifier in span._.modifiers:
-    #         if re.search(text, modifier.span.lower_, re.IGNORECASE):
-    #             return True
-    #
-    # else:
-    #     for modifier in span._.modifiers:
-    #         if modifier.span.upper_ == text.upper():
-    #             return True
-    # return False
-
 def is_preceded_by(ent, target, window=1):
     """Check if an entity is preceded by a target word within a certain window.
     Case-insensitive.
@@ -140,9 +127,12 @@ def remove_ent(ent, i):
     """Remove an entity at position [i] from doc.ents."""
     ent.doc.ents = ent.doc.ents[:i] + ent.doc.ents[i+1:]
 
-
 def set_label(ent, i, label):
-    """Create a copy of the entity with a new label."""
+    """Create a copy of the entity with a new label.
+    WARNING: This is not safe, as spaCy does not allow modifying the label
+    of a span. Instead this creates a new copy and attempts to copy existing
+    attributes, but this is not totally reliable.
+    """
     from spacy.tokens import Span
     new_ent = Span(ent.doc, ent.start, ent.end, label=label)
     # Copy any additional attributes
@@ -159,3 +149,6 @@ def set_label(ent, i, label):
 
 def set_negated(ent, i, value=True):
     ent._.is_negated = value
+
+
+
